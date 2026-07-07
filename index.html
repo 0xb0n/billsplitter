@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Split the Bill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --page: #EAE3D3;
+    --paper: #FBF7EF;
+    --ink: #26231D;
+    --ink-soft: #6B6252;
+    --line: #D8CFB9;
+    --stamp: #B23A2F;
+    --stamp-dark: #8C2C23;
+    --olive: #5B6B4E;
+    --focus: #2E5AAC;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--page);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(0,0,0,0.05) 1px, transparent 0);
+    background-size: 22px 22px;
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    padding:32px 16px 80px;
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+  header{
+    text-align:center;
+    margin-bottom:28px;
+  }
+  header h1{
+    font-family:'Special Elite', cursive;
+    font-size:2rem;
+    letter-spacing:2px;
+    margin:0 0 4px;
+    color:var(--ink);
+  }
+  header p{
+    margin:0;
+    color:var(--ink-soft);
+    font-size:0.9rem;
+  }
+  .howto{
+    list-style:none;
+    text-align:left;
+    max-width:460px;
+    margin:14px auto 0;
+    padding:12px 16px;
+    background:#F1EADB;
+    border:1px solid var(--line);
+    border-radius:6px;
+    font-size:0.82rem;
+    color:var(--ink-soft);
+  }
+  .howto li{display:flex;gap:8px;padding:3px 0;}
+  .howto li .step-num{
+    color:var(--stamp);
+    font-weight:700;
+    font-family:'Courier Prime', monospace;
+  }
+  .card{
+    background:var(--paper);
+    border-radius:6px;
+    padding:22px 22px 26px;
+    margin-bottom:18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 8px 20px -12px rgba(0,0,0,0.25);
+    border:1px solid var(--line);
+  }
+  .card h2{
+    font-family:'Special Elite', cursive;
+    font-size:1.05rem;
+    margin:0 0 14px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    color:var(--ink);
+  }
+  .card h2 .num{
+    color:var(--stamp);
+  }
+  /* People */
+  .chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;min-height:2px;}
+  .chip{
+    background:#F1EADB;
+    border:1px solid var(--line);
+    padding:6px 10px 6px 12px;
+    border-radius:20px;
+    font-size:0.9rem;
+    display:flex;align-items:center;gap:6px;
+  }
+  .chip button{
+    background:none;border:none;cursor:pointer;color:var(--ink-soft);
+    font-size:1rem;line-height:1;padding:0 2px;
+  }
+  .chip button:hover{color:var(--stamp);}
+  .chip .treat-btn{
+    font-size:0.95rem;
+    filter:grayscale(1);opacity:0.45;
+  }
+  .chip .treat-btn.on, .chip .treat-btn:hover{filter:none;opacity:1;}
+  .chip.treated{background:var(--olive);border-color:var(--olive);color:#fff;}
+  .chip.treated button{color:#E7E3D6;}
+  .inline-form{display:flex;gap:8px;flex-wrap:wrap;}
+  input[type="text"], input[type="number"]{
+    font-family:'Inter', sans-serif;
+    border:1px solid var(--line);
+    background:#fff;
+    border-radius:4px;
+    padding:9px 10px;
+    font-size:0.92rem;
+    color:var(--ink);
+  }
+  input:focus-visible, button:focus-visible, .toggle-btn:focus-visible{
+    outline:2px solid var(--focus);
+    outline-offset:2px;
+  }
+  .inline-form input[type="text"]{flex:1;min-width:120px;}
+  .btn{
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:0.88rem;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:4px;
+    padding:9px 16px;
+    cursor:pointer;
+  }
+  .btn:hover{background:#3a3529;}
+  .btn.ghost{
+    background:transparent;
+    color:var(--ink);
+    border:1px solid var(--ink);
+  }
+  .btn.ghost:hover{background:#00000008;}
+  .empty-hint{color:var(--ink-soft);font-size:0.85rem;font-style:italic;}
+
+  /* Items */
+  .item-row{
+    border:1px dashed var(--line);
+    border-radius:6px;
+    padding:12px 14px;
+    margin-bottom:10px;
+  }
+  .item-top{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;
+  }
+  .item-name{font-weight:600;}
+  .item-cost{font-family:'Courier Prime', monospace;font-weight:700;}
+  .item-remove{
+    background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:1rem;
+  }
+  .item-remove:hover{color:var(--stamp);}
+  .consumers{display:flex;flex-wrap:wrap;gap:10px;}
+  .consumers label{
+    display:flex;align-items:center;gap:5px;
+    font-size:0.85rem;
+    background:#F1EADB;
+    padding:4px 9px;
+    border-radius:14px;
+    cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .consumers label.checked{
+    background:var(--olive);
+    color:#fff;
+  }
+  .consumers input{accent-color:var(--olive);}
+  .item-add-form{
+    display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;
+  }
+  .item-add-form input[type="text"]{flex:2;min-width:130px;}
+  .item-add-form input[type="number"]{flex:1;min-width:90px;}
+
+  /* Charges */
+  .charge-row{
+    display:flex;align-items:center;gap:12px;
+    padding:8px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .charge-row:last-child{border-bottom:none;}
+  .charge-row label.name{
+    flex:1;font-weight:500;display:flex;align-items:center;gap:8px;
+  }
+  .charge-row input[type="number"]{width:70px;text-align:right;font-family:'Courier Prime',monospace;}
+  .charge-row .charge-hint{
+    display:block;font-weight:400;font-size:0.75rem;color:var(--ink-soft);margin-top:2px;
+  }
+  .preset-row{display:flex;gap:6px;margin-bottom:14px;}
+  .preset-btn{
+    flex:1;border:1px solid var(--line);background:#F1EADB;border-radius:6px;
+    padding:8px 4px;cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;
+    font-size:0.8rem;color:var(--ink-soft);
+  }
+  .preset-btn span{display:block;font-weight:400;font-size:0.7rem;margin-top:2px;}
+  .preset-btn:hover{border-color:var(--ink-soft);}
+  .preset-btn.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .gst-incl-row{padding-left:14px;}
+  .gst-incl-row label.name{cursor:pointer;font-weight:400;font-size:0.9rem;}
+  .gst-incl-row input[type="checkbox"]{width:16px;height:16px;accent-color:var(--olive);flex-shrink:0;}
+  .unit-toggle{
+    font-family:'Courier Prime',monospace;font-weight:700;font-size:0.9rem;
+    border:1px solid var(--line);background:#F1EADB;border-radius:4px;
+    width:34px;padding:7px 0;cursor:pointer;color:var(--ink);
+  }
+  .unit-toggle:hover{border-color:var(--ink-soft);}
+  .pct-sign{color:var(--ink-soft);font-size:0.85rem;}
+  .switch{
+    position:relative;width:38px;height:22px;flex-shrink:0;
+  }
+  .switch input{opacity:0;width:0;height:0;}
+  .slider{
+    position:absolute;cursor:pointer;inset:0;
+    background:#CFC6B2;border-radius:22px;transition:.15s;
+  }
+  .slider::before{
+    content:"";position:absolute;height:16px;width:16px;left:3px;top:3px;
+    background:white;border-radius:50%;transition:.15s;
+  }
+  .switch input:checked + .slider{background:var(--olive);}
+  .switch input:checked + .slider::before{transform:translateX(16px);}
+
+  /* Split mode toggle */
+  .mode-toggle{
+    display:flex;background:#F1EADB;border-radius:6px;padding:4px;gap:4px;
+  }
+  .toggle-btn{
+    flex:1;border:none;background:transparent;padding:10px 8px;border-radius:4px;
+    font-family:'Inter',sans-serif;font-weight:600;font-size:0.85rem;cursor:pointer;
+    color:var(--ink-soft);
+  }
+  .toggle-btn.active{background:var(--ink);color:var(--paper);}
+
+  .calc-btn{
+    display:block;width:100%;
+    background:var(--stamp);
+    color:#fff;
+    font-family:'Special Elite',cursive;
+    font-size:1.1rem;
+    letter-spacing:1px;
+    padding:16px;
+    border:none;border-radius:6px;
+    cursor:pointer;
+    margin-top:6px;
+  }
+  .calc-btn:hover{background:var(--stamp-dark);}
+
+  /* Receipt result */
+  .receipt-wrap{margin-top:24px;}
+  .receipt{
+    background:var(--paper);
+    border-radius:2px;
+    padding:26px 24px 4px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 10px 24px -14px rgba(0,0,0,0.35);
+    font-family:'Courier Prime', monospace;
+  }
+  .receipt h2{
+    font-family:'Special Elite',cursive;
+    text-align:center;
+    margin:0 0 4px;
+    font-size:1.2rem;
+  }
+  .receipt .sub{
+    text-align:center;color:var(--ink-soft);font-size:0.78rem;margin-bottom:16px;
+  }
+  .receipt-line{
+    display:flex;justify-content:space-between;font-size:0.9rem;padding:3px 0;
+  }
+  .receipt-line.dim{color:var(--ink-soft);}
+  .receipt-divider{
+    border:none;border-top:1px dashed var(--ink-soft);margin:10px 0;
+  }
+  .receipt-total{
+    display:flex;justify-content:space-between;font-weight:700;font-size:1.05rem;
+    padding:8px 0 4px;
+  }
+  .person-block{
+    padding:10px 0;
+    border-bottom:1px dashed var(--line);
+  }
+  .person-block:last-of-type{border-bottom:none;}
+  .person-block .p-header{
+    display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  }
+  .person-block .p-name{font-weight:700;font-size:0.98rem;}
+  .person-block .p-amount{font-weight:700;font-size:1.05rem;color:var(--stamp);white-space:nowrap;}
+  .person-block .p-items{color:var(--ink-soft);font-size:0.78rem;margin-top:2px;}
+  .equal-total{
+    text-align:center;
+    padding:18px 0 8px;
+  }
+  .equal-total .amount{
+    font-size:2.6rem;font-weight:700;color:var(--stamp);display:block;
+  }
+  .equal-total .label{color:var(--ink-soft);font-size:0.85rem;}
+  .torn-edge{
+    height:16px;
+    margin-top:8px;
+    background:
+      linear-gradient(-45deg, var(--page) 8px, transparent 0),
+      linear-gradient(45deg, var(--page) 8px, transparent 0);
+    background-size: 16px 16px;
+    background-position: left bottom;
+    background-repeat:repeat-x;
+  }
+  .copy-btn{
+    width:100%;
+    margin-top:12px;
+  }
+  .note{
+    font-family:'Inter',sans-serif;
+    color:var(--ink-soft);
+    font-size:0.78rem;
+    text-align:center;
+    margin-top:10px;
+  }
+  .hidden{display:none !important;}
+  footer{
+    text-align:center;color:var(--ink-soft);font-size:0.78rem;margin-top:30px;
+  }
+  @media (max-width:480px){
+    header h1{font-size:1.5rem;}
+    .equal-total .amount{font-size:2.1rem;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>SPLIT THE BILL</h1>
+    <p>Add your group, list what was ordered, and see who owes what — nothing is saved anywhere.</p>
+    <ol class="howto">
+      <li><span class="step-num">1.</span><span>Add everyone at the table</span></li>
+      <li><span class="step-num">2.</span><span>List what was ordered, and tick who had each item</span></li>
+      <li><span class="step-num">3.</span><span>Pick your charges — or tap a venue preset</span></li>
+      <li><span class="step-num">4.</span><span>Print the split, then copy it to your group chat</span></li>
+    </ol>
+  </header>
+
+  <!-- PEOPLE -->
+  <section class="card">
+    <h2><span class="num">1.</span> Who's at the table?</h2>
+    <div class="chip-row" id="peopleChips"></div>
+    <div class="inline-form">
+      <input type="text" id="personInput" placeholder="Add a name" maxlength="24" />
+      <button class="btn" id="addPersonBtn">Add person</button>
+    </div>
+    <p class="note" style="text-align:left;">Tap 🎁 on a person to treat them — the rest of the table covers their share.</p>
+  </section>
+
+  <!-- ITEMS -->
+  <section class="card">
+    <h2><span class="num">2.</span> What was ordered?</h2>
+    <div id="itemsList"></div>
+    <p class="empty-hint" id="itemsEmptyHint">No items yet — add the first one below.</p>
+    <div class="item-add-form">
+      <input type="text" id="itemNameInput" placeholder="Item name (e.g. Garlic Naan)" maxlength="40" />
+      <input type="number" id="itemCostInput" placeholder="Cost" min="0" step="0.01" />
+      <button class="btn" id="addItemBtn">Add item</button>
+    </div>
+  </section>
+
+  <!-- CHARGES -->
+  <section class="card">
+    <h2><span class="num">3.</span> Extra charges</h2>
+    <div class="preset-row">
+      <button class="preset-btn" type="button" data-preset="restaurant">Restaurant<span>10% svc + GST</span></button>
+      <button class="preset-btn" type="button" data-preset="cafe">Café / fast food<span>GST in prices</span></button>
+      <button class="preset-btn" type="button" data-preset="hawker">Hawker<span>nett</span></button>
+    </div>
+    <div class="charge-row">
+      <label class="name">Service charge</label>
+      <input type="number" id="serviceRate" value="10" min="0" step="0.1" /><span class="pct-sign">%</span>
+      <label class="switch"><input type="checkbox" id="serviceOn" checked /><span class="slider"></span></label>
+    </div>
+    <div class="charge-row">
+      <label class="name">GST</label>
+      <input type="number" id="gstRate" value="9" min="0" step="0.1" /><span class="pct-sign">%</span>
+      <label class="switch"><input type="checkbox" id="gstOn" checked /><span class="slider"></span></label>
+    </div>
+    <div class="charge-row gst-incl-row">
+      <label class="name" for="gstIncl">Prices already include GST
+        <span class="charge-hint">GST shown for info, not added on top</span>
+      </label>
+      <input type="checkbox" id="gstIncl" />
+    </div>
+    <div class="charge-row">
+      <label class="name">Other charge</label>
+      <input type="number" id="otherRate" value="0" min="0" step="0.1" />
+      <button class="unit-toggle" type="button" id="otherUnitBtn" aria-label="Switch between percent and flat dollar amount">%</button>
+      <label class="switch"><input type="checkbox" id="otherOn" /><span class="slider"></span></label>
+    </div>
+  </section>
+
+  <!-- SPLIT MODE -->
+  <section class="card">
+    <h2><span class="num">4.</span> How to split</h2>
+    <div class="mode-toggle">
+      <button class="toggle-btn active" id="modeEqualBtn">Split evenly</button>
+      <button class="toggle-btn" id="modeItemBtn">Split by item</button>
+    </div>
+    <p class="note" style="margin-top:10px;">
+      "Split evenly" divides the whole bill by the number of people.
+      "Split by item" uses who's ticked for each item above.
+    </p>
+  </section>
+
+  <button class="calc-btn" id="calcBtn">Print the split</button>
+
+  <div class="receipt-wrap hidden" id="resultsWrap">
+    <div class="receipt" id="receipt"></div>
+    <div class="torn-edge"></div>
+    <button class="btn ghost copy-btn" id="copyBtn">Copy summary as text</button>
+  </div>
+
+  <footer>No accounts, no servers, no data saved. Refresh to start a new bill.</footer>
+</div>
+
+<script>
+(function(){
+  let people = [];      // {id, name}
+  let items = [];       // {id, name, cost, consumers:Set(personId)}
+  let nextPersonId = 1;
+  let nextItemId = 1;
+  let splitMode = 'equal'; // 'equal' | 'item'
+  let lastSummaryText = '';
+
+  const peopleChips = document.getElementById('peopleChips');
+  const personInput = document.getElementById('personInput');
+  const itemsList = document.getElementById('itemsList');
+  const itemsEmptyHint = document.getElementById('itemsEmptyHint');
+  const itemNameInput = document.getElementById('itemNameInput');
+  const itemCostInput = document.getElementById('itemCostInput');
+  const resultsWrap = document.getElementById('resultsWrap');
+  const receiptEl = document.getElementById('receipt');
+  const modeEqualBtn = document.getElementById('modeEqualBtn');
+  const modeItemBtn = document.getElementById('modeItemBtn');
+
+  function fmt(n){
+    return '$' + n.toFixed(2);
+  }
+
+  // ---------- PEOPLE ----------
+  function renderPeople(){
+    peopleChips.innerHTML = '';
+    if(people.length === 0){
+      const hint = document.createElement('span');
+      hint.className = 'empty-hint';
+      hint.textContent = 'No one added yet.';
+      peopleChips.appendChild(hint);
+    }
+    people.forEach(p => {
+      const chip = document.createElement('div');
+      chip.className = 'chip' + (p.treated ? ' treated' : '');
+      chip.innerHTML = `<span>${escapeHtml(p.name)}</span>`;
+      const treat = document.createElement('button');
+      treat.className = 'treat-btn' + (p.treated ? ' on' : '');
+      treat.textContent = '🎁';
+      treat.setAttribute('aria-pressed', p.treated);
+      treat.setAttribute('aria-label', 'Treat ' + p.name + ' — the others cover their share');
+      treat.onclick = () => { p.treated = !p.treated; renderPeople(); };
+      chip.appendChild(treat);
+      const rm = document.createElement('button');
+      rm.setAttribute('aria-label', 'Remove ' + p.name);
+      rm.textContent = '×';
+      rm.onclick = () => {
+        people = people.filter(x => x.id !== p.id);
+        items.forEach(it => it.consumers.delete(p.id));
+        renderPeople();
+        renderItems();
+      };
+      chip.appendChild(rm);
+      peopleChips.appendChild(chip);
+    });
+  }
+
+  function addPerson(){
+    const name = personInput.value.trim();
+    if(!name) return;
+    people.push({id: nextPersonId++, name, treated: false});
+    personInput.value = '';
+    renderPeople();
+    renderItems(); // new person should appear as a consumer option
+    personInput.focus();
+  }
+  document.getElementById('addPersonBtn').onclick = addPerson;
+  personInput.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); addPerson(); }});
+
+  // ---------- ITEMS ----------
+  function renderItems(){
+    itemsList.innerHTML = '';
+    itemsEmptyHint.classList.toggle('hidden', items.length !== 0);
+    items.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'item-row';
+
+      const top = document.createElement('div');
+      top.className = 'item-top';
+      top.innerHTML = `<span class="item-name">${escapeHtml(item.name)}</span><span class="item-cost">${fmt(item.cost)}</span>`;
+      const rm = document.createElement('button');
+      rm.className = 'item-remove';
+      rm.setAttribute('aria-label', 'Remove ' + item.name);
+      rm.textContent = '✕';
+      rm.onclick = () => { items = items.filter(x => x.id !== item.id); renderItems(); };
+      top.appendChild(rm);
+      row.appendChild(top);
+
+      const consumersDiv = document.createElement('div');
+      consumersDiv.className = 'consumers';
+      if(people.length === 0){
+        consumersDiv.innerHTML = '<span class="empty-hint">Add people above to assign this item.</span>';
+      } else {
+        people.forEach(p => {
+          const checked = item.consumers.has(p.id);
+          const label = document.createElement('label');
+          label.className = checked ? 'checked' : '';
+          const cb = document.createElement('input');
+          cb.type = 'checkbox';
+          cb.checked = checked;
+          cb.onchange = () => {
+            if(cb.checked){ item.consumers.add(p.id); } else { item.consumers.delete(p.id); }
+            label.className = cb.checked ? 'checked' : '';
+          };
+          label.appendChild(cb);
+          label.appendChild(document.createTextNode(p.name));
+          consumersDiv.appendChild(label);
+        });
+      }
+      row.appendChild(consumersDiv);
+      itemsList.appendChild(row);
+    });
+  }
+
+  function addItem(){
+    const name = itemNameInput.value.trim();
+    const cost = parseFloat(itemCostInput.value);
+    if(!name || isNaN(cost) || cost < 0) return;
+    // default: shared by everyone currently in the group
+    const consumers = new Set(people.map(p => p.id));
+    items.push({id: nextItemId++, name, cost, consumers});
+    itemNameInput.value = '';
+    itemCostInput.value = '';
+    renderItems();
+    itemNameInput.focus();
+  }
+  document.getElementById('addItemBtn').onclick = addItem;
+  [itemNameInput, itemCostInput].forEach(inp => {
+    inp.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); addItem(); }});
+  });
+
+  // ---------- CHARGES ----------
+  const serviceOnCb = document.getElementById('serviceOn');
+  const gstOnCb = document.getElementById('gstOn');
+  const gstInclCb = document.getElementById('gstIncl');
+
+  const PRESETS = {
+    restaurant: {service: true,  gst: true,  incl: false},
+    cafe:       {service: false, gst: true,  incl: true},
+    hawker:     {service: false, gst: false, incl: false}
+  };
+  function syncPresetHighlight(){
+    const s = serviceOnCb.checked, g = gstOnCb.checked, i = gstInclCb.checked;
+    let match = null;
+    if(s && g && !i) match = 'restaurant';
+    else if(!s && g && i) match = 'cafe';
+    else if(!s && !g) match = 'hawker';
+    document.querySelectorAll('.preset-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.preset === match));
+  }
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.onclick = () => {
+      const p = PRESETS[btn.dataset.preset];
+      serviceOnCb.checked = p.service;
+      gstOnCb.checked = p.gst;
+      gstInclCb.checked = p.incl;
+      syncPresetHighlight();
+    };
+  });
+  [serviceOnCb, gstOnCb, gstInclCb].forEach(cb => cb.addEventListener('change', syncPresetHighlight));
+  syncPresetHighlight();
+
+  let otherUnit = 'pct'; // 'pct' | 'flat'
+  const otherUnitBtn = document.getElementById('otherUnitBtn');
+  otherUnitBtn.onclick = () => {
+    otherUnit = otherUnit === 'pct' ? 'flat' : 'pct';
+    otherUnitBtn.textContent = otherUnit === 'pct' ? '%' : '$';
+    document.getElementById('otherRate').step = otherUnit === 'pct' ? '0.1' : '0.01';
+  };
+
+  // ---------- SPLIT MODE ----------
+  modeEqualBtn.onclick = () => { splitMode = 'equal'; modeEqualBtn.classList.add('active'); modeItemBtn.classList.remove('active'); };
+  modeItemBtn.onclick = () => { splitMode = 'item'; modeItemBtn.classList.add('active'); modeEqualBtn.classList.remove('active'); };
+
+  // ---------- CALCULATION ----------
+  document.getElementById('calcBtn').onclick = calculate;
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function computeCharges(subtotal){
+    const serviceOn = serviceOnCb.checked;
+    const gstOn = gstOnCb.checked;
+    const gstIncl = gstInclCb.checked;
+    const otherOn = document.getElementById('otherOn').checked;
+    const serviceRate = parseFloat(document.getElementById('serviceRate').value) || 0;
+    const gstRate = parseFloat(document.getElementById('gstRate').value) || 0;
+    const otherVal = parseFloat(document.getElementById('otherRate').value) || 0;
+
+    const serviceAmt = serviceOn ? subtotal * serviceRate / 100 : 0;
+    const otherAmt = otherOn ? (otherUnit === 'pct' ? subtotal * otherVal / 100 : otherVal) : 0;
+    let gstAmt, gstIncluded = false, grandTotal;
+    if(gstOn && gstIncl){
+      // prices are GST-inclusive: extract for display, don't add on top
+      gstAmt = subtotal * gstRate / (100 + gstRate);
+      gstIncluded = true;
+      grandTotal = subtotal + serviceAmt + otherAmt;
+    } else {
+      gstAmt = gstOn ? (subtotal + serviceAmt) * gstRate / 100 : 0;
+      grandTotal = subtotal + serviceAmt + gstAmt + otherAmt;
+    }
+    return {subtotal, serviceAmt, gstAmt, gstIncluded, otherAmt, grandTotal};
+  }
+
+  function calculate(){
+    if(people.length === 0){
+      alert('Add at least one person first.');
+      return;
+    }
+    if(items.length === 0){
+      alert('Add at least one item first.');
+      return;
+    }
+    if(people.every(p => p.treated)){
+      alert('Everyone is marked as treated — someone has to pay.');
+      return;
+    }
+
+    if(splitMode === 'equal'){
+      const subtotal = items.reduce((s, it) => s + it.cost, 0);
+      renderEqualReceipt(computeCharges(subtotal));
+    } else {
+      // items nobody is ticked on are left out of the bill entirely
+      const validIds = new Set(people.map(p => p.id));
+      const assignedItems = items.filter(it => [...it.consumers].some(id => validIds.has(id)));
+      const unassignedNames = items.filter(it => !assignedItems.includes(it)).map(it => it.name);
+      const subtotal = assignedItems.reduce((s, it) => s + it.cost, 0);
+      renderItemizedReceipt(computeCharges(subtotal), assignedItems, unassignedNames);
+    }
+    resultsWrap.classList.remove('hidden');
+    resultsWrap.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+
+  function chargesBlockHtml(c){
+    const gstLabel = c.gstIncluded ? 'GST (included in prices)' : 'GST';
+    let html = `<div class="receipt-line"><span>Subtotal</span><span>${fmt(c.subtotal)}</span></div>`;
+    if(c.serviceAmt > 0) html += `<div class="receipt-line dim"><span>Service charge</span><span>${fmt(c.serviceAmt)}</span></div>`;
+    if(c.gstAmt > 0) html += `<div class="receipt-line dim"><span>${gstLabel}</span><span>${fmt(c.gstAmt)}</span></div>`;
+    if(c.otherAmt > 0) html += `<div class="receipt-line dim"><span>Other charge</span><span>${fmt(c.otherAmt)}</span></div>`;
+    html += `<hr class="receipt-divider" />`;
+    html += `<div class="receipt-total"><span>Total</span><span>${fmt(c.grandTotal)}</span></div>`;
+    return html;
+  }
+
+  function chargesBlockText(c){
+    const gstLabel = c.gstIncluded ? 'GST (included in prices)' : 'GST';
+    let lines = [`Subtotal: ${fmt(c.subtotal)}`];
+    if(c.serviceAmt > 0) lines.push(`Service charge: ${fmt(c.serviceAmt)}`);
+    if(c.gstAmt > 0) lines.push(`${gstLabel}: ${fmt(c.gstAmt)}`);
+    if(c.otherAmt > 0) lines.push(`Other charge: ${fmt(c.otherAmt)}`);
+    lines.push(`Total: ${fmt(c.grandTotal)}`);
+    return lines;
+  }
+
+  function renderEqualReceipt(c){
+    const payers = people.filter(p => !p.treated);
+    const treated = people.filter(p => p.treated);
+    const share = c.grandTotal / payers.length;
+    const subLabel = treated.length
+      ? `Split evenly across ${payers.length} paying ${payers.length===1?'person':'people'}`
+      : `Split evenly across ${people.length} ${people.length===1?'person':'people'}`;
+    let html = `<h2>The Split</h2><p class="sub">${subLabel}</p>`;
+    html += chargesBlockHtml(c);
+    html += `<div class="equal-total">
+      <span class="amount">${fmt(share)}</span>
+      <span class="label">${treated.length ? 'per paying person' : 'per person'}</span>
+    </div>`;
+    if(treated.length){
+      html += `<p class="note">🎁 Treated by the table: ${escapeHtml(treated.map(t => t.name).join(', '))}</p>`;
+    }
+    receiptEl.innerHTML = html;
+
+    const textLines = [
+      'Split the Bill',
+      subLabel,
+      '',
+      ...chargesBlockText(c),
+      '',
+      `Each ${treated.length ? 'paying ' : ''}person owes: ${fmt(share)}`
+    ];
+    if(treated.length){
+      textLines.push(`Treated by the table: ${treated.map(t => t.name).join(', ')}`);
+    }
+    lastSummaryText = textLines.join('\n');
+  }
+
+  function renderItemizedReceipt(c, assignedItems, unassignedNames){
+    const payers = people.filter(p => !p.treated);
+    const treated = people.filter(p => p.treated);
+
+    // per-person subtotal from assigned items
+    const personSubtotal = {};
+    people.forEach(p => personSubtotal[p.id] = 0);
+    assignedItems.forEach(item => {
+      const consumerIds = [...item.consumers].filter(id => personSubtotal.hasOwnProperty(id));
+      const share = item.cost / consumerIds.length;
+      consumerIds.forEach(id => personSubtotal[id] += share);
+    });
+
+    const extraTotal = c.grandTotal - c.subtotal;
+    const rawTotals = {};
+    people.forEach(p => {
+      const ratio = c.subtotal > 0 ? personSubtotal[p.id] / c.subtotal : 1 / people.length;
+      rawTotals[p.id] = personSubtotal[p.id] + ratio * extraTotal;
+    });
+
+    // treated shares are absorbed equally by the payers
+    if(treated.length){
+      const treatedTotal = treated.reduce((s, t) => s + rawTotals[t.id], 0);
+      treated.forEach(t => rawTotals[t.id] = 0);
+      payers.forEach(p => rawTotals[p.id] += treatedTotal / payers.length);
+    }
+
+    // rounding fix: adjust the largest paying share so totals sum exactly to grandTotal
+    const roundedTotals = {};
+    let roundedSum = 0;
+    people.forEach(p => {
+      roundedTotals[p.id] = Math.round(rawTotals[p.id] * 100) / 100;
+      roundedSum += roundedTotals[p.id];
+    });
+    const diff = Math.round((c.grandTotal - roundedSum) * 100) / 100;
+    if(Math.abs(diff) >= 0.01 && payers.length > 0){
+      const biggest = payers.reduce((a,b) => rawTotals[a.id] > rawTotals[b.id] ? a : b);
+      roundedTotals[biggest.id] = Math.round((roundedTotals[biggest.id] + diff) * 100) / 100;
+    }
+
+    function personItemNames(p){
+      return assignedItems.filter(it => it.consumers.has(p.id)).map(it => {
+        const n = [...it.consumers].filter(id => personSubtotal.hasOwnProperty(id)).length;
+        return n > 1 ? `${it.name} (÷${n})` : it.name;
+      });
+    }
+
+    let html = `<h2>The Split</h2><p class="sub">By item, shared charges pro-rated</p>`;
+    html += chargesBlockHtml(c);
+    html += `<hr class="receipt-divider" />`;
+
+    people.forEach(p => {
+      const itemNames = personItemNames(p);
+      let itemsLine = itemNames.length ? escapeHtml(itemNames.join(', ')) : 'No items assigned';
+      if(p.treated) itemsLine += ' — 🎁 treated, covered by the others';
+      html += `<div class="person-block">
+        <div class="p-header">
+          <span class="p-name">${escapeHtml(p.name)}</span>
+          <span class="p-amount">${fmt(roundedTotals[p.id])}</span>
+        </div>
+        <div class="p-items">${itemsLine}</div>
+      </div>`;
+    });
+
+    if(unassignedNames.length){
+      html += `<p class="note">Not assigned to anyone — left out of the bill: ${escapeHtml(unassignedNames.join(', '))}</p>`;
+    }
+
+    receiptEl.innerHTML = html;
+
+    const textLines = [
+      'Split the Bill',
+      'Split by item, shared charges pro-rated',
+      '',
+      ...chargesBlockText(c),
+      ''
+    ];
+    people.forEach(p => {
+      const itemNames = personItemNames(p);
+      let itemsPart = itemNames.length ? ` (${itemNames.join(', ')})` : ' (no items assigned)';
+      if(p.treated) itemsPart += ' (treated — covered by the others)';
+      textLines.push(`${p.name}: ${fmt(roundedTotals[p.id])}${itemsPart}`);
+    });
+    if(unassignedNames.length){
+      textLines.push('', `Not assigned to anyone, left out of the bill: ${unassignedNames.join(', ')}`);
+    }
+    lastSummaryText = textLines.join('\n');
+  }
+
+  const copyBtn = document.getElementById('copyBtn');
+  copyBtn.addEventListener('click', async () => {
+    if(!lastSummaryText) return;
+    const originalLabel = copyBtn.textContent;
+    try{
+      await navigator.clipboard.writeText(lastSummaryText);
+      copyBtn.textContent = 'Copied ✓';
+    }catch(e){
+      // clipboard API blocked (e.g. insecure context) — fall back to a manual selection
+      const ta = document.createElement('textarea');
+      ta.value = lastSummaryText;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try{
+        document.execCommand('copy');
+        copyBtn.textContent = 'Copied ✓';
+      }catch(e2){
+        copyBtn.textContent = 'Copy failed — select manually';
+      }
+      document.body.removeChild(ta);
+    }
+    setTimeout(() => { copyBtn.textContent = originalLabel; }, 1800);
+  });
+
+  renderPeople();
+  renderItems();
+})();
+</script>
+</body>
+</html>
