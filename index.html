@@ -4,9 +4,26 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Bill Splitter - Split The Bill</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:wght@400;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  /* Self-hosted fonts (fonts/ folder) — no third-party requests. Inter is a
+     single variable-weight file; Courier Prime ships 400 + 700; the browser
+     maps the CSS's 500/600/700 to the nearest available weight. */
+  @font-face{
+    font-family:'Special Elite';font-style:normal;font-weight:400;font-display:swap;
+    src:url('fonts/special-elite-400.woff2') format('woff2');
+  }
+  @font-face{
+    font-family:'Courier Prime';font-style:normal;font-weight:400;font-display:swap;
+    src:url('fonts/courier-prime-400.woff2') format('woff2');
+  }
+  @font-face{
+    font-family:'Courier Prime';font-style:normal;font-weight:700;font-display:swap;
+    src:url('fonts/courier-prime-700.woff2') format('woff2');
+  }
+  @font-face{
+    font-family:'Inter';font-style:normal;font-weight:100 900;font-display:swap;
+    src:url('fonts/inter-var.woff2') format('woff2');
+  }
   :root{
     --page: #EAE3D3;
     --paper: #FBF7EF;
@@ -173,6 +190,22 @@
     color:#fff;
   }
   .consumers input{accent-color:var(--olive);}
+  .item-cost s{color:var(--ink-soft);font-weight:400;margin-right:6px;}
+  .item-disc-add{
+    background:none;border:none;cursor:pointer;
+    color:var(--ink-soft);font-family:'Inter',sans-serif;font-size:0.78rem;
+    padding:0;margin-top:8px;text-decoration:underline;text-underline-offset:2px;
+  }
+  .item-disc-add:hover{color:var(--stamp);}
+  .item-disc{
+    display:flex;align-items:center;gap:8px;margin-top:8px;
+    font-size:0.82rem;color:var(--ink-soft);
+  }
+  .item-disc input[type="number"]{width:70px;text-align:right;font-family:'Courier Prime',monospace;padding:5px 8px;}
+  .item-disc .item-disc-remove{
+    background:none;border:none;cursor:pointer;color:var(--ink-soft);font-size:0.95rem;padding:0 2px;
+  }
+  .item-disc .item-disc-remove:hover{color:var(--stamp);}
   .item-add-form{
     display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;
   }
@@ -376,6 +409,14 @@
       <button class="preset-btn" type="button" data-preset="hawker">Hawker<span>nett</span></button>
     </div>
     <div class="charge-row">
+      <label class="name"><span>Discount
+        <span class="charge-hint">Taken off the subtotal before service charge &amp; GST</span>
+      </span></label>
+      <input type="number" id="discountRate" value="0" min="0" step="0.1" />
+      <button class="unit-toggle" type="button" id="discountUnitBtn" aria-label="Switch between percent and flat dollar amount">%</button>
+      <label class="switch"><input type="checkbox" id="discountOn" /><span class="slider"></span></label>
+    </div>
+    <div class="charge-row">
       <label class="name">Service charge</label>
       <input type="number" id="serviceRate" value="10" min="0" step="0.1" /><span class="pct-sign">%</span>
       <label class="switch"><input type="checkbox" id="serviceOn" checked /><span class="slider"></span></label>
@@ -426,7 +467,7 @@
 <script>
 (function(){
   let people = [];      // {id, name}
-  let items = [];       // {id, name, cost, consumers:Set(personId)}
+  let items = [];       // {id, name, cost, consumers:Set(personId), disc:{on, value, unit}}
   let nextPersonId = 1;
   let nextItemId = 1;
   let splitMode = 'equal'; // 'equal' | 'item'
@@ -445,6 +486,23 @@
 
   function fmt(n){
     return '$' + n.toFixed(2);
+  }
+
+  // Per-item discount: how much comes off this item's cost (never below $0).
+  function itemDiscountAmt(item){
+    if(!item.disc || !item.disc.on) return 0;
+    const v = Math.max(0, item.disc.value || 0);
+    const amt = item.disc.unit === 'pct' ? item.cost * Math.min(v, 100) / 100 : v;
+    return Math.min(amt, item.cost);
+  }
+  function itemNetCost(item){
+    return item.cost - itemDiscountAmt(item);
+  }
+  function itemDiscountLabel(item){
+    if(!item.disc || !item.disc.on || itemDiscountAmt(item) <= 0) return '';
+    return item.disc.unit === 'pct'
+      ? `−${Math.min(Math.max(0, item.disc.value || 0), 100)}%`
+      : `−${fmt(itemDiscountAmt(item))}`;
   }
 
   // ---------- PEOPLE ----------
@@ -503,7 +561,15 @@
 
       const top = document.createElement('div');
       top.className = 'item-top';
-      top.innerHTML = `<span class="item-name">${escapeHtml(item.name)}</span><span class="item-cost">${fmt(item.cost)}</span>`;
+      top.innerHTML = `<span class="item-name">${escapeHtml(item.name)}</span><span class="item-cost"></span>`;
+      const costSpan = top.querySelector('.item-cost');
+      function refreshCost(){
+        const discAmt = itemDiscountAmt(item);
+        costSpan.innerHTML = discAmt > 0
+          ? `<s>${fmt(item.cost)}</s>${fmt(itemNetCost(item))}`
+          : fmt(item.cost);
+      }
+      refreshCost();
       const rm = document.createElement('button');
       rm.className = 'item-remove';
       rm.setAttribute('aria-label', 'Remove ' + item.name);
@@ -534,6 +600,52 @@
         });
       }
       row.appendChild(consumersDiv);
+
+      // Per-item discount: hidden behind a small link until needed.
+      if(!item.disc.on){
+        const addDisc = document.createElement('button');
+        addDisc.type = 'button';
+        addDisc.className = 'item-disc-add';
+        addDisc.textContent = '+ discount on this item';
+        addDisc.onclick = () => { item.disc.on = true; renderItems(); };
+        row.appendChild(addDisc);
+      } else {
+        const disc = document.createElement('div');
+        disc.className = 'item-disc';
+        disc.appendChild(document.createTextNode('Discount'));
+        const valInput = document.createElement('input');
+        valInput.type = 'number';
+        valInput.min = '0';
+        valInput.step = item.disc.unit === 'pct' ? '0.1' : '0.01';
+        valInput.value = item.disc.value || '';
+        valInput.setAttribute('aria-label', 'Discount on ' + item.name);
+        valInput.oninput = () => {
+          item.disc.value = parseFloat(valInput.value) || 0;
+          refreshCost();
+        };
+        disc.appendChild(valInput);
+        const unitBtn = document.createElement('button');
+        unitBtn.type = 'button';
+        unitBtn.className = 'unit-toggle';
+        unitBtn.textContent = item.disc.unit === 'pct' ? '%' : '$';
+        unitBtn.setAttribute('aria-label', 'Switch between percent and flat dollar amount');
+        unitBtn.onclick = () => {
+          item.disc.unit = item.disc.unit === 'pct' ? 'flat' : 'pct';
+          unitBtn.textContent = item.disc.unit === 'pct' ? '%' : '$';
+          valInput.step = item.disc.unit === 'pct' ? '0.1' : '0.01';
+          refreshCost();
+        };
+        disc.appendChild(unitBtn);
+        const rmDisc = document.createElement('button');
+        rmDisc.type = 'button';
+        rmDisc.className = 'item-disc-remove';
+        rmDisc.textContent = '✕';
+        rmDisc.setAttribute('aria-label', 'Remove discount on ' + item.name);
+        rmDisc.onclick = () => { item.disc.on = false; item.disc.value = 0; renderItems(); };
+        disc.appendChild(rmDisc);
+        row.appendChild(disc);
+      }
+
       itemsList.appendChild(row);
     });
   }
@@ -544,7 +656,7 @@
     if(!name || isNaN(cost) || cost < 0) return;
     // default: shared by everyone currently in the group
     const consumers = new Set(people.map(p => p.id));
-    items.push({id: nextItemId++, name, cost, consumers});
+    items.push({id: nextItemId++, name, cost, consumers, disc: {on: false, value: 0, unit: 'pct'}});
     itemNameInput.value = '';
     itemCostInput.value = '';
     renderItems();
@@ -594,6 +706,14 @@
     document.getElementById('otherRate').step = otherUnit === 'pct' ? '0.1' : '0.01';
   };
 
+  let discountUnit = 'pct'; // 'pct' | 'flat'
+  const discountUnitBtn = document.getElementById('discountUnitBtn');
+  discountUnitBtn.onclick = () => {
+    discountUnit = discountUnit === 'pct' ? 'flat' : 'pct';
+    discountUnitBtn.textContent = discountUnit === 'pct' ? '%' : '$';
+    document.getElementById('discountRate').step = discountUnit === 'pct' ? '0.1' : '0.01';
+  };
+
   // ---------- SPLIT MODE ----------
   modeEqualBtn.onclick = () => { splitMode = 'equal'; modeEqualBtn.classList.add('active'); modeItemBtn.classList.remove('active'); };
   modeItemBtn.onclick = () => { splitMode = 'item'; modeItemBtn.classList.add('active'); modeEqualBtn.classList.remove('active'); };
@@ -607,28 +727,45 @@
     return d.innerHTML;
   }
 
-  function computeCharges(subtotal){
+  // subtotal is the gross (pre-discount) item total; itemDiscTotal the sum of
+  // per-item discounts on those same items. The bill-level discount then comes
+  // off that net figure, and service charge + GST are computed on the
+  // discounted base — SG receipts discount BEFORE the svc/GST stack.
+  function computeCharges(subtotal, itemDiscTotal){
+    itemDiscTotal = itemDiscTotal || 0;
     const serviceOn = serviceOnCb.checked;
     const gstOn = gstOnCb.checked;
     const gstIncl = gstInclCb.checked;
     const otherOn = document.getElementById('otherOn').checked;
+    const discountOn = document.getElementById('discountOn').checked;
     const serviceRate = parseFloat(document.getElementById('serviceRate').value) || 0;
     const gstRate = parseFloat(document.getElementById('gstRate').value) || 0;
     const otherVal = parseFloat(document.getElementById('otherRate').value) || 0;
+    const discountVal = Math.max(0, parseFloat(document.getElementById('discountRate').value) || 0);
 
-    const serviceAmt = serviceOn ? subtotal * serviceRate / 100 : 0;
-    const otherAmt = otherOn ? (otherUnit === 'pct' ? subtotal * otherVal / 100 : otherVal) : 0;
+    const netItems = subtotal - itemDiscTotal;
+    let billDiscAmt = 0;
+    if(discountOn){
+      billDiscAmt = discountUnit === 'pct'
+        ? netItems * Math.min(discountVal, 100) / 100
+        : Math.min(discountVal, netItems); // a voucher can't take the bill below $0
+    }
+    const base = netItems - billDiscAmt; // discounted subtotal — svc & GST stack on this
+
+    const serviceAmt = serviceOn ? base * serviceRate / 100 : 0;
+    const otherAmt = otherOn ? (otherUnit === 'pct' ? base * otherVal / 100 : otherVal) : 0;
     let gstAmt, gstIncluded = false, grandTotal;
     if(gstOn && gstIncl){
       // prices are GST-inclusive: extract for display, don't add on top
-      gstAmt = subtotal * gstRate / (100 + gstRate);
+      gstAmt = base * gstRate / (100 + gstRate);
       gstIncluded = true;
-      grandTotal = subtotal + serviceAmt + otherAmt;
+      grandTotal = base + serviceAmt + otherAmt;
     } else {
-      gstAmt = gstOn ? (subtotal + serviceAmt) * gstRate / 100 : 0;
-      grandTotal = subtotal + serviceAmt + gstAmt + otherAmt;
+      gstAmt = gstOn ? (base + serviceAmt) * gstRate / 100 : 0;
+      grandTotal = base + serviceAmt + gstAmt + otherAmt;
     }
-    return {subtotal, serviceAmt, gstAmt, gstIncluded, otherAmt, grandTotal};
+    return {subtotal, itemDiscTotal, billDiscAmt, discountedSubtotal: base,
+            serviceAmt, gstAmt, gstIncluded, otherAmt, grandTotal};
   }
 
   function calculate(){
@@ -647,14 +784,16 @@
 
     if(splitMode === 'equal'){
       const subtotal = items.reduce((s, it) => s + it.cost, 0);
-      renderEqualReceipt(computeCharges(subtotal));
+      const itemDiscTotal = items.reduce((s, it) => s + itemDiscountAmt(it), 0);
+      renderEqualReceipt(computeCharges(subtotal, itemDiscTotal));
     } else {
       // items nobody is ticked on are left out of the bill entirely
       const validIds = new Set(people.map(p => p.id));
       const assignedItems = items.filter(it => [...it.consumers].some(id => validIds.has(id)));
       const unassignedNames = items.filter(it => !assignedItems.includes(it)).map(it => it.name);
       const subtotal = assignedItems.reduce((s, it) => s + it.cost, 0);
-      renderItemizedReceipt(computeCharges(subtotal), assignedItems, unassignedNames);
+      const itemDiscTotal = assignedItems.reduce((s, it) => s + itemDiscountAmt(it), 0);
+      renderItemizedReceipt(computeCharges(subtotal, itemDiscTotal), assignedItems, unassignedNames);
     }
     resultsWrap.classList.remove('hidden');
     resultsWrap.scrollIntoView({behavior:'smooth', block:'start'});
@@ -663,6 +802,8 @@
   function chargesBlockHtml(c){
     const gstLabel = c.gstIncluded ? 'GST (included in prices)' : 'GST';
     let html = `<div class="receipt-line"><span>Subtotal</span><span>${fmt(c.subtotal)}</span></div>`;
+    if(c.itemDiscTotal > 0) html += `<div class="receipt-line dim"><span>Item discounts</span><span>−${fmt(c.itemDiscTotal)}</span></div>`;
+    if(c.billDiscAmt > 0) html += `<div class="receipt-line dim"><span>Discount</span><span>−${fmt(c.billDiscAmt)}</span></div>`;
     if(c.serviceAmt > 0) html += `<div class="receipt-line dim"><span>Service charge</span><span>${fmt(c.serviceAmt)}</span></div>`;
     if(c.gstAmt > 0) html += `<div class="receipt-line dim"><span>${gstLabel}</span><span>${fmt(c.gstAmt)}</span></div>`;
     if(c.otherAmt > 0) html += `<div class="receipt-line dim"><span>Other charge</span><span>${fmt(c.otherAmt)}</span></div>`;
@@ -674,6 +815,8 @@
   function chargesBlockText(c){
     const gstLabel = c.gstIncluded ? 'GST (included in prices)' : 'GST';
     let lines = [`Subtotal: ${fmt(c.subtotal)}`];
+    if(c.itemDiscTotal > 0) lines.push(`Item discounts: −${fmt(c.itemDiscTotal)}`);
+    if(c.billDiscAmt > 0) lines.push(`Discount: −${fmt(c.billDiscAmt)}`);
     if(c.serviceAmt > 0) lines.push(`Service charge: ${fmt(c.serviceAmt)}`);
     if(c.gstAmt > 0) lines.push(`${gstLabel}: ${fmt(c.gstAmt)}`);
     if(c.otherAmt > 0) lines.push(`Other charge: ${fmt(c.otherAmt)}`);
@@ -717,19 +860,24 @@
     const payers = people.filter(p => !p.treated);
     const treated = people.filter(p => p.treated);
 
-    // per-person subtotal from assigned items
+    // per-person subtotal from assigned items, at each item's NET cost — a
+    // discount on one item benefits the people who shared that item
     const personSubtotal = {};
     people.forEach(p => personSubtotal[p.id] = 0);
     assignedItems.forEach(item => {
       const consumerIds = [...item.consumers].filter(id => personSubtotal.hasOwnProperty(id));
-      const share = item.cost / consumerIds.length;
+      const share = itemNetCost(item) / consumerIds.length;
       consumerIds.forEach(id => personSubtotal[id] += share);
     });
 
-    const extraTotal = c.grandTotal - c.subtotal;
+    // Everything beyond the net item costs (svc + GST + other − bill discount)
+    // is pro-rated by each person's share of the net food subtotal, so the
+    // bill-level discount also flows back in proportion to what each ate.
+    const netItems = c.subtotal - c.itemDiscTotal;
+    const extraTotal = c.grandTotal - netItems;
     const rawTotals = {};
     people.forEach(p => {
-      const ratio = c.subtotal > 0 ? personSubtotal[p.id] / c.subtotal : 1 / people.length;
+      const ratio = netItems > 0 ? personSubtotal[p.id] / netItems : 1 / people.length;
       rawTotals[p.id] = personSubtotal[p.id] + ratio * extraTotal;
     });
 
@@ -756,7 +904,11 @@
     function personItemNames(p){
       return assignedItems.filter(it => it.consumers.has(p.id)).map(it => {
         const n = [...it.consumers].filter(id => personSubtotal.hasOwnProperty(id)).length;
-        return n > 1 ? `${it.name} (÷${n})` : it.name;
+        const tags = [];
+        if(n > 1) tags.push(`÷${n}`);
+        const discLabel = itemDiscountLabel(it);
+        if(discLabel) tags.push(discLabel);
+        return tags.length ? `${it.name} (${tags.join(', ')})` : it.name;
       });
     }
 
