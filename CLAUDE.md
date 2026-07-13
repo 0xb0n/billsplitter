@@ -17,6 +17,10 @@ perforated edge under the results receipt. Keep this identity when adding UI.
 - Add/remove people (chips) and items (name + cost)
 - Each item defaults to "shared by everyone currently added"; per-item
   checkboxes to mark who consumed it
+- Weighted shares within an item: consumers is a Map(personId -> shares),
+  default 1; a − n + stepper appears on each ticked consumer chip. Cost splits
+  by shares/totalShares. Receipt keeps "(÷n)" when all shares are equal and
+  only shows "(x/y shares)" when they differ
 - Charges: Service (10%), GST (9%), Other — each toggleable, editable;
   Other switches between % of subtotal and flat $ via a unit toggle button
 - Discount (toggleable): % or flat $, applied to the subtotal BEFORE service
@@ -44,7 +48,8 @@ perforated edge under the results receipt. Keep this identity when adding UI.
   AND total (with a receipt note) — previously their cost stayed in the total
   and the rounding correction silently dumped it on the biggest share
 - Copy-summary-as-text button (clipboard API with execCommand fallback)
-- Person rows in results: name + amount on same line, items below in grey
+- Person rows in results: name + amount on same line, items below in grey;
+  copy-text mirrors this (name + amount, then a 2-space-indented items line)
 
 ## Known issues (from code review, not yet fixed)
 1. Equal-split mode lacks the rounding-cent correction that itemized mode has
@@ -66,7 +71,8 @@ perforated edge under the results receipt. Keep this identity when adding UI.
 
 ## Considered and deferred
 - Cash rounding to nearest $0.05 (off by default if added)
-- Item quantities; weighted shares within an item ("Jon drank double")
+- Item quantities (weighted shares within an item are DONE — see Current
+  features; quantities as a price-entry shortcut remain deferred)
 - Live "++" total preview while adding items
 
 ## Explicitly rejected — do not add

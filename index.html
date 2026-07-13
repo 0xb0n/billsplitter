@@ -190,6 +190,17 @@
     color:#fff;
   }
   .consumers input{accent-color:var(--olive);}
+  .share-stepper{display:inline-flex;align-items:center;gap:3px;margin-left:2px;}
+  .share-stepper button{
+    width:16px;height:16px;padding:0;border:none;border-radius:50%;
+    background:rgba(255,255,255,0.25);color:inherit;cursor:pointer;
+    font-size:0.8rem;line-height:1;display:flex;align-items:center;justify-content:center;
+  }
+  .share-stepper button:hover{background:rgba(255,255,255,0.5);}
+  .share-stepper .share-count{
+    font-family:'Courier Prime',monospace;font-weight:700;font-size:0.8rem;
+    min-width:11px;text-align:center;
+  }
   .item-cost s{color:var(--ink-soft);font-weight:400;margin-right:6px;}
   .item-disc-add{
     background:none;border:none;cursor:pointer;
@@ -467,7 +478,7 @@
 <script>
 (function(){
   let people = [];      // {id, name}
-  let items = [];       // {id, name, cost, consumers:Set(personId), disc:{on, value, unit}}
+  let items = [];       // {id, name, cost, consumers:Map(personId -> shares), disc:{on, value, unit}}
   let nextPersonId = 1;
   let nextItemId = 1;
   let splitMode = 'equal'; // 'equal' | 'item'
@@ -584,18 +595,47 @@
         consumersDiv.innerHTML = '<span class="empty-hint">Add people above to assign this item.</span>';
       } else {
         people.forEach(p => {
-          const checked = item.consumers.has(p.id);
+          const shares = item.consumers.get(p.id) || 0;
+          const checked = shares > 0;
           const label = document.createElement('label');
           label.className = checked ? 'checked' : '';
           const cb = document.createElement('input');
           cb.type = 'checkbox';
           cb.checked = checked;
           cb.onchange = () => {
-            if(cb.checked){ item.consumers.add(p.id); } else { item.consumers.delete(p.id); }
-            label.className = cb.checked ? 'checked' : '';
+            if(cb.checked){ item.consumers.set(p.id, 1); } else { item.consumers.delete(p.id); }
+            renderItems();
           };
           label.appendChild(cb);
           label.appendChild(document.createTextNode(p.name));
+          if(checked){
+            const stepper = document.createElement('span');
+            stepper.className = 'share-stepper';
+            const minus = document.createElement('button');
+            minus.type = 'button';
+            minus.textContent = '−';
+            minus.setAttribute('aria-label', 'One share less for ' + p.name);
+            minus.onclick = (e) => {
+              e.preventDefault(); // don't let the label toggle the checkbox
+              if(shares > 1){ item.consumers.set(p.id, shares - 1); renderItems(); }
+            };
+            const count = document.createElement('span');
+            count.className = 'share-count';
+            count.textContent = shares;
+            const plus = document.createElement('button');
+            plus.type = 'button';
+            plus.textContent = '+';
+            plus.setAttribute('aria-label', 'One share more for ' + p.name);
+            plus.onclick = (e) => {
+              e.preventDefault();
+              item.consumers.set(p.id, shares + 1);
+              renderItems();
+            };
+            stepper.appendChild(minus);
+            stepper.appendChild(count);
+            stepper.appendChild(plus);
+            label.appendChild(stepper);
+          }
           consumersDiv.appendChild(label);
         });
       }
@@ -654,8 +694,8 @@
     const name = itemNameInput.value.trim();
     const cost = parseFloat(itemCostInput.value);
     if(!name || isNaN(cost) || cost < 0) return;
-    // default: shared by everyone currently in the group
-    const consumers = new Set(people.map(p => p.id));
+    // default: one share each for everyone currently in the group
+    const consumers = new Map(people.map(p => [p.id, 1]));
     items.push({id: nextItemId++, name, cost, consumers, disc: {on: false, value: 0, unit: 'pct'}});
     itemNameInput.value = '';
     itemCostInput.value = '';
@@ -789,7 +829,7 @@
     } else {
       // items nobody is ticked on are left out of the bill entirely
       const validIds = new Set(people.map(p => p.id));
-      const assignedItems = items.filter(it => [...it.consumers].some(id => validIds.has(id)));
+      const assignedItems = items.filter(it => [...it.consumers.keys()].some(id => validIds.has(id)));
       const unassignedNames = items.filter(it => !assignedItems.includes(it)).map(it => it.name);
       const subtotal = assignedItems.reduce((s, it) => s + it.cost, 0);
       const itemDiscTotal = assignedItems.reduce((s, it) => s + itemDiscountAmt(it), 0);
@@ -865,9 +905,9 @@
     const personSubtotal = {};
     people.forEach(p => personSubtotal[p.id] = 0);
     assignedItems.forEach(item => {
-      const consumerIds = [...item.consumers].filter(id => personSubtotal.hasOwnProperty(id));
-      const share = itemNetCost(item) / consumerIds.length;
-      consumerIds.forEach(id => personSubtotal[id] += share);
+      const entries = [...item.consumers.entries()].filter(([id]) => personSubtotal.hasOwnProperty(id));
+      const totalShares = entries.reduce((s, [, n]) => s + n, 0);
+      entries.forEach(([id, n]) => personSubtotal[id] += itemNetCost(item) * n / totalShares);
     });
 
     // Everything beyond the net item costs (svc + GST + other − bill discount)
@@ -903,9 +943,13 @@
 
     function personItemNames(p){
       return assignedItems.filter(it => it.consumers.has(p.id)).map(it => {
-        const n = [...it.consumers].filter(id => personSubtotal.hasOwnProperty(id)).length;
+        const entries = [...it.consumers.entries()].filter(([id]) => personSubtotal.hasOwnProperty(id));
+        const totalShares = entries.reduce((s, [, n]) => s + n, 0);
+        const allEqual = entries.every(([, n]) => n === entries[0][1]);
         const tags = [];
-        if(n > 1) tags.push(`÷${n}`);
+        // equal shares keep the familiar ÷n; only unequal splits show fractions
+        if(!allEqual) tags.push(`${it.consumers.get(p.id)}/${totalShares} shares`);
+        else if(entries.length > 1) tags.push(`÷${entries.length}`);
         const discLabel = itemDiscountLabel(it);
         if(discLabel) tags.push(discLabel);
         return tags.length ? `${it.name} (${tags.join(', ')})` : it.name;
@@ -944,9 +988,10 @@
     ];
     people.forEach(p => {
       const itemNames = personItemNames(p);
-      let itemsPart = itemNames.length ? ` (${itemNames.join(', ')})` : ' (no items assigned)';
-      if(p.treated) itemsPart += ' (treated — covered by the others)';
-      textLines.push(`${p.name}: ${fmt(roundedTotals[p.id])}${itemsPart}`);
+      textLines.push(`${p.name}: ${fmt(roundedTotals[p.id])}`);
+      let detail = itemNames.length ? itemNames.join(', ') : 'no items assigned';
+      if(p.treated) detail += ' — treated, covered by the others';
+      textLines.push(`  ${detail}`);
     });
     if(unassignedNames.length){
       textLines.push('', `Not assigned to anyone, left out of the bill: ${unassignedNames.join(', ')}`);

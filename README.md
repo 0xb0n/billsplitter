@@ -6,6 +6,7 @@ No backend, no login, no data stored — refresh the page to start a new bill.
 **Features**
 
 - Add people and items; tick who consumed each item
+- Weighted shares — a − n + stepper on each ticked person ("Jon had 2 of the 4 beers")
 - Service charge (10%), GST (9%), and other charge (% or flat $) — all toggleable and editable
 - Venue presets: Restaurant (++), Café/fast food (GST in prices), Hawker (nett)
 - "Prices already include GST" mode — GST shown for info, not added on top
